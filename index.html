@@ -520,20 +520,16 @@ async function submitSurvey1(){
     const fd = new FormData(formEl);
     const puestoKey = fd.get("puesto");
     const p = PUESTOS[puestoKey];
-    const competencias_corporativas = [];
-    CORPORATE_COMPS.forEach((item,i)=>{ competencias_corporativas.push({ nombre:item.tech, pregunta_mostrada:item.plain, nivel: Number(fd.get("corp_"+i)) }); });
-    const competencias = [];
-    (p.comps||[]).forEach((item,i)=>{ competencias.push({ nombre:item.tech, pregunta_mostrada:item.plain, nivel: Number(fd.get("comp_"+i)) }); });
     const payload = {
       ts: new Date().toISOString(),
       nombre: fd.get("nombre"),
       puesto: p.label,
       sede: fd.get("sede"),
-      antiguedad: fd.get("antiguedad"),
-      competencias_corporativas,
-      competencias,
-      aprender: fd.get("aprender")
+      antiguedad: fd.get("antiguedad")
     };
+    CORPORATE_COMPS.forEach((item,i)=>{ payload["[Corporativa] " + item.plain] = Number(fd.get("corp_"+i)); });
+    (p.comps||[]).forEach((item,i)=>{ payload[item.plain] = Number(fd.get("comp_"+i)); });
+    payload["aprender"] = fd.get("aprender");
     const id = await saveEntry("Encuesta1_Autopercepcion", payload);
     showSuccess(id, "Autopercepción de Competencias");
   }catch(ex){
@@ -664,12 +660,13 @@ function renderSurvey3(){
     btn.disabled=true; btn.textContent="Guardando…";
     try{
       const fd = new FormData(formEl);
-      const equipos = [];
+      const payload = { ts:new Date().toISOString(), nombre:fd.get("nombre"), area:fd.get("area") };
       for(let n=1;n<=3;n++){
-        const puesto = fd.get("puesto"+n);
-        if(puesto){ equipos.push({ puesto, falta: fd.get("falta"+n)||"", preparacion: fd.get("prep"+n)||"" }); }
+        payload["puesto"+n] = fd.get("puesto"+n) || "";
+        payload["falta"+n] = fd.get("falta"+n) || "";
+        payload["preparacion"+n] = fd.get("prep"+n) || "";
       }
-      const payload = { ts:new Date().toISOString(), nombre:fd.get("nombre"), area:fd.get("area"), equipos, top3:fd.get("top3") };
+      payload["top3"] = fd.get("top3");
       const id = await saveEntry("Encuesta3_Gerentes", payload); showSuccess(id,"Gerentes: Percepción de Brechas");
     }
     catch(ex){
