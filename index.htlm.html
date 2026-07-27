@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagnóstico PEM — Fase 1</title>
+<style>
+  :root{
+    --navy:#125640;
+    --navy-dk:#0D2019;
+    --green-header:#163024;
+    --steel:#4A5560;
+    --amber:#C9922B;
+    --amber-dk:#9C7220;
+    --bg:#F5F2E8;
+    --card:#FFFFFF;
+    --line:#DCD6C4;
+    --ok:#2F7D5C;
+    --err:#B3402A;
+    --text:#20242B;
+    --muted:#6B7280;
+    --sage:#9FB8AC;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{ font-family:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace; letter-spacing:.03em; }
+  header.top{
+    position:relative; overflow:hidden;
+    background:linear-gradient(135deg, var(--green-header) 0%, var(--navy-dk) 100%);
+    color:#fff; padding:22px 20px 20px;
+    border-bottom:4px solid var(--amber);
+  }
+  header.top .head-row{ display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
+  header.top .eyebrow{
+    font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--sage); margin-bottom:6px; font-weight:600;
+  }
+  header.top h1{ margin:0; font-size:22px; font-weight:700; color:#F5F2E8; }
+  header.top .sub{ font-size:13px; color:#C9D6CE; margin-top:5px; max-width:440px; line-height:1.4; }
+  .logo-badge{
+    flex-shrink:0; width:120px; height:120px; border-radius:50%; background:#fff;
+    display:flex; align-items:center; justify-content:center; padding:16px;
+    box-shadow:0 2px 10px rgba(0,0,0,.3);
+  }
+  .logo-badge img{ width:100%; height:100%; object-fit:contain; }
+  .wrap{ max-width:640px; margin:0 auto; padding:18px 16px 60px; }
+  .folio{
+    display:inline-block; margin-top:10px; font-size:11px; color:#DCE9E1;
+    border:1px solid #2E5647; padding:3px 8px; border-radius:3px;
+  }
+  /* HOME */
+  .grid{ display:grid; gap:12px; margin-top:18px; }
+  .card-btn{
+    display:flex; align-items:center; gap:14px; background:var(--card);
+    border:1px solid var(--line); border-left:5px solid var(--navy);
+    border-radius:6px; padding:16px 16px; cursor:pointer; text-align:left;
+    transition:transform .12s ease, box-shadow .12s ease; width:100%;
+  }
+  .card-btn:hover{ transform:translateY(-1px); box-shadow:0 4px 14px rgba(31,56,100,.12); }
+  .card-btn .num{
+    font-family:"SFMono-Regular",Consolas,monospace; font-size:20px; font-weight:700;
+    color:var(--amber-dk); width:34px; flex-shrink:0;
+  }
+  .card-btn .t{ font-size:15px; font-weight:600; color:var(--navy); }
+  .card-btn .d{ font-size:12.5px; color:var(--muted); margin-top:2px; }
+  .card-btn.admin{ border-left-color:var(--steel); }
+  .card-btn.admin .num{ color:var(--steel); }
+  .tag{
+    display:inline-block; font-size:10.5px; padding:2px 7px; border-radius:3px;
+    margin-top:6px; font-weight:600; letter-spacing:.02em;
+  }
+  .tag.anon{ background:#EAF3EE; color:var(--ok); }
+  .tag.id{ background:#FBEFE1; color:var(--amber-dk); }
+
+  /* FORM SHELL */
+  .backbar{
+    display:flex; align-items:center; gap:8px; margin-bottom:14px; cursor:pointer;
+    color:var(--navy); font-size:13.5px; font-weight:600; user-select:none;
+  }
+  .backbar:hover{ text-decoration:underline; }
+  .panel{ background:var(--card); border:1px solid var(--line); border-radius:8px; padding:20px 18px; }
+  .panel h2{ margin:0 0 4px; font-size:18px; color:var(--navy); }
+  .panel .meta{ font-size:12.5px; color:var(--muted); margin-bottom:18px; }
+  fieldset{
+    border:none; padding:0; margin:0 0 20px; border-bottom:1px solid var(--line); padding-bottom:18px;
+  }
+  fieldset:last-of-type{ border-bottom:none; }
+  legend{
+    font-size:14px; font-weight:600; color:var(--text); padding:0; margin-bottom:10px; width:100%;
+  }
+  .q-num{ color:var(--amber-dk); font-family:monospace; margin-right:6px; }
+  label.field-label{ display:block; font-size:13.5px; font-weight:600; margin-bottom:8px; }
+  input[type=text], textarea, select{
+    width:100%; padding:10px 11px; border:1px solid #C9C4B6; border-radius:5px;
+    font-size:14.5px; font-family:inherit; background:#FCFCFA; color:var(--text);
+  }
+  textarea{ min-height:70px; resize:vertical; }
+  select{ appearance:auto; }
+  .scale-row{ display:flex; flex-direction:column; gap:8px; }
+  .scale-opt{
+    display:flex; align-items:flex-start; gap:10px; padding:9px 10px; border:1px solid var(--line);
+    border-radius:5px; cursor:pointer; background:#FCFCFA;
+  }
+  .scale-opt:hover{ border-color:var(--amber); }
+  .scale-opt input{ margin-top:2px; accent-color:var(--navy); }
+  .scale-opt .lbl{ font-size:13.5px; line-height:1.35; }
+  .scale-opt .lbl b{ font-family:monospace; color:var(--amber-dk); margin-right:5px; }
+  .req{ color:var(--err); }
+  .btn{
+    background:var(--navy); color:#fff; border:none; padding:12px 22px; border-radius:5px;
+    font-size:14.5px; font-weight:600; cursor:pointer;
+  }
+  .btn:hover{ background:var(--navy-dk); }
+  .btn:disabled{ opacity:.55; cursor:default; }
+  .btn.ghost{ background:transparent; color:var(--navy); border:1px solid var(--navy); }
+  .btn.small{ padding:7px 12px; font-size:12.5px; }
+  .actions{ display:flex; gap:10px; margin-top:6px; align-items:center; }
+  .scale-opt:has(input:invalid){ border-color:var(--err); }
+  input:invalid, select:invalid, textarea:invalid{ outline:2px solid transparent; }
+  .error-msg{ color:var(--err); font-size:12.5px; margin-top:6px; display:none; }
+  .success{
+    text-align:center; padding:40px 16px;
+  }
+  .success .check{
+    width:52px; height:52px; border-radius:50%; background:var(--ok); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-size:26px; margin:0 auto 16px;
+  }
+  .success h2{ color:var(--ok); }
+  .success .folio2{ margin-top:10px; font-size:12px; color:var(--muted); }
+
+  /* ADMIN */
+  .stat-row{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+  .stat{
+    flex:1; min-width:120px; background:var(--card); border:1px solid var(--line);
+    border-radius:6px; padding:12px 14px;
+  }
+  .stat .n{ font-size:22px; font-weight:700; color:var(--navy); font-family:monospace; }
+  .stat .l{ font-size:11.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+  table{ width:100%; border-collapse:collapse; font-size:12.5px; margin-top:8px; }
+  th,td{ text-align:left; padding:7px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th{ background:#EFEDE6; color:var(--steel); font-size:11px; text-transform:uppercase; letter-spacing:.03em; }
+  .section-title{ font-size:14px; font-weight:700; color:var(--navy); margin:22px 0 6px; }
+  .warn{
+    background:#FBEFE1; border:1px solid #E9C98A; color:#7A5410; font-size:12.5px;
+    padding:10px 12px; border-radius:5px; margin-bottom:16px;
+  }
+  .loading{ text-align:center; padding:30px; color:var(--muted); font-size:13.5px; }
+  .empty{ text-align:center; padding:20px; color:var(--muted); font-size:13px; font-style:italic; }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap" style="padding:0;">
+    <div class="head-row">
+      <div>
+        <div class="eyebrow">Production Enhancement México, S. de R.L. de C.V.</div>
+        <h1>Diagnóstico Organizacional PEM</h1>
+        <div class="sub">Tu opinión construye el sistema de talento y desarrollo de PEM. Elige la encuesta que te corresponda — te toma unos minutos.</div>
+      </div>
+      <div class="logo-badge"><img src="data:image/png;base64,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" alt="PEM Oil & Gas"></div>
+    </div>
+    <div class="folio mono" id="folioTag">FOLIO —</div>
+  </div>
+</header>
+<div class="wrap"><div id="app"></div></div>
+
+<script>
+const SEDES = ["CDMX","Monterrey","Guadalajara","Reynosa","Poza Rica","Veracruz","Villahermosa"];
+
+function c(tech, plain){ return { tech, plain }; }
+
+const CORPORATE_COMPS = [
+  c("Integridad y cumplimiento anticorrupción (Código de Ética / SGAS)", "Conozco y aplico las reglas de conducta ética de la empresa en mi trabajo diario"),
+  c("Orientación a la seguridad (cultura HSE en el día a día)", "Tomo en cuenta la seguridad en cada tarea que realizo, aunque no sea mi área"),
+  c("Enfoque en el cliente (interno o externo)", "Entiendo qué necesita la persona o el cliente al que atiendo y se lo entrego bien"),
+  c("Trabajo en equipo y comunicación efectiva", "Me comunico con claridad con mis compañeros y colaboro cuando se necesita"),
+  c("Uso responsable de herramientas digitales de la empresa (M365, portal de talento)", "Sé usar las herramientas digitales de la empresa (correo, Teams, este portal) para hacer mi trabajo")
+];
+
+const PUESTOS = {
+  "tecnico_campo": {
+    label: "Técnico de Campo (Compresión)",
+    comps: [
+      c("Bloqueo y etiquetado (LOTO) y permisos de trabajo", "Sé bloquear y etiquetar equipos de forma segura antes de trabajar en ellos, y tramitar los permisos necesarios"),
+      c("Diagnóstico de falla mecánica en compresor reciprocante", "Puedo identificar la causa de una falla mecánica en un compresor"),
+      c("Lectura de planos P&ID", "Sé leer e interpretar los planos (diagramas) del equipo en el que trabajo"),
+      c("Uso de EPP especializado y trabajo en espacios confinados", "Uso correctamente mi equipo de protección y sigo el procedimiento para entrar a espacios confinados")
+    ]
+  },
+  "esp_medicion": {
+    label: "Especialista de Medición",
+    comps: [
+      c("Calibración de equipos de medición trifásica", "Sé calibrar los equipos de medición que uso"),
+      c("Normatividad de medición de hidrocarburos (API MPMS / NOM aplicable)", "Conozco las normas que debo seguir al medir hidrocarburos"),
+      c("Interpretación de reportes de aforo/medición", "Sé leer e interpretar los reportes de medición que genero"),
+      c("Trazabilidad metrológica (ISO 9001, cláusula 7.1.5)", "Sé documentar y dar seguimiento a la calibración de mis equipos para que sea rastreable")
+    ]
+  },
+  "operador": {
+    label: "Operador de Compresores",
+    comps: [
+      c("Arranque, paro y monitoreo de unidad reciprocante", "Sé arrancar, parar y vigilar el funcionamiento de una unidad compresora"),
+      c("Interpretación de panel de control / telemetría", "Sé leer e interpretar la información del panel de control"),
+      c("Respuesta a paro de emergencia", "Sé qué hacer si el equipo se detiene por una emergencia"),
+      c("Bitácora de operación y reporte de anomalías", "Registro correctamente lo que pasa en mi turno y reporto cualquier anomalía")
+    ]
+  },
+  "supervisor": {
+    label: "Supervisor de Sede",
+    comps: [
+      c("Gestión de desempeño de mi equipo de campo", "Doy seguimiento al desempeño de mi equipo y les doy retroalimentación"),
+      c("Investigación de incidentes y análisis de causa raíz", "Sé investigar un incidente y encontrar su causa real"),
+      c("Gestión de no conformidades ISO 9001", "Sé identificar cuándo algo no se hizo como debía y dar seguimiento a la corrección"),
+      c("Dominio técnico de la especialidad de mi equipo", "Domino lo técnico del trabajo que superviso, no solo lo administrativo")
+    ]
+  },
+  "gerente": {
+    label: "Gerente de Área",
+    comps: [
+      c("Planeación y gestión de KPIs de operación", "Sé planear el trabajo de mi área y dar seguimiento a sus resultados"),
+      c("Gestión del cambio y desarrollo de equipos", "Sé guiar a mi equipo cuando hay cambios y ayudarlos a crecer"),
+      c("Relación con cliente y gestión contractual (MSA/SOW)", "Sé manejar la relación con el cliente y los compromisos del contrato")
+    ]
+  },
+  "hse": {
+    label: "HSE (Seguridad, Salud y Ambiente)",
+    comps: [
+      c("Identificación de peligros y evaluación de riesgos (IPER)", "Sé identificar los peligros de una actividad y evaluar qué tan riesgosa es"),
+      c("Investigación de incidentes y análisis de causa raíz", "Sé investigar un incidente y encontrar su causa real"),
+      c("Normatividad STPS y ambiental aplicable a compresión y medición", "Conozco las normas de seguridad y ambientales que aplican a nuestra operación"),
+      c("Gestión de permisos de trabajo de alto riesgo (izajes, espacios confinados, trabajo en caliente)", "Sé revisar y autorizar permisos para trabajos de alto riesgo (izajes, espacios confinados, trabajo en caliente)"),
+      c("Indicadores de seguridad (LTI, TRIR) y reporte a cliente", "Sé llevar y reportar los números de seguridad de la empresa")
+    ]
+  },
+  "comercial": {
+    label: "Comercial (Ventas)",
+    comps: [
+      c("Elaboración y seguimiento de propuestas técnico-comerciales (cotizaciones, SOW)", "Sé preparar y dar seguimiento a una cotización o propuesta para un cliente"),
+      c("Gestión de relación y cuenta con cliente (PEMEX, PERENCO, Kodiak)", "Sé mantener y hacer crecer la relación con nuestros clientes"),
+      c("Conocimiento del portafolio técnico de PEM (compresión, medición, AMS, refacciones)", "Conozco bien todo lo que ofrece PEM para poder explicarlo al cliente"),
+      c("Negociación y cierre comercial", "Sé negociar y cerrar una venta"),
+      c("Control de pipeline de oportunidades (CRM/Excel)", "Llevo control de mis oportunidades de venta en proceso")
+    ]
+  },
+  "calidad_sgi": {
+    label: "Calidad / SGI",
+    comps: [
+      c("Auditoría interna ISO 9001", "Sé revisar si un proceso se está haciendo como debe hacerse y detectar cuando algo no cumple"),
+      c("Gestión de no conformidades y acciones correctivas", "Sé documentar un problema de calidad y dar seguimiento hasta que se resuelva"),
+      c("Control de documentos y registros del SGI", "Sé mantener los documentos y registros de la empresa organizados y actualizados"),
+      c("Gestión de indicadores de calidad", "Sé dar seguimiento a los números de calidad de la empresa"),
+      c("Función Antisoborno / SGAS aplicada a procesos (ISO 37001)", "Sé identificar y reportar situaciones de riesgo de soborno o conflicto de interés en mis procesos")
+    ]
+  },
+  "proyectos": {
+    label: "Proyectos",
+    comps: [
+      c("Planeación y control de proyecto (alcance, tiempo, costo)", "Sé planear un proyecto y dar seguimiento a su alcance, tiempo y costo"),
+      c("Gestión de riesgos de proyecto", "Sé identificar y anticipar los riesgos de un proyecto"),
+      c("Coordinación con cliente y proveedores durante la ejecución", "Sé coordinarme con el cliente y los proveedores durante la ejecución"),
+      c("Cierre y entrega de proyecto (documentación, lecciones aprendidas)", "Sé cerrar un proyecto correctamente, con su documentación y aprendizajes")
+    ]
+  },
+  "compras_almacen": {
+    label: "Compras / Almacén",
+    comps: [
+      c("Gestión de compras y negociación con proveedores", "Sé comprar y negociar con proveedores"),
+      c("Control de inventario de refacciones y materiales críticos", "Sé controlar el inventario de refacciones y materiales críticos"),
+      c("Trazabilidad de almacén (entradas/salidas, kardex)", "Sé registrar correctamente las entradas y salidas del almacén"),
+      c("Evaluación y homologación de proveedores", "Sé evaluar si un proveedor cumple lo que promete")
+    ]
+  },
+  "finanzas_admin": {
+    label: "Finanzas y Administración (Tesorería, Contabilidad, CxP/CxC)",
+    comps: [
+      c("Gestión de cuentas por cobrar y por pagar", "Sé dar seguimiento a lo que la empresa debe cobrar y pagar"),
+      c("Registro contable y cumplimiento fiscal", "Sé registrar contablemente y cumplir con las obligaciones fiscales"),
+      c("Control de flujo de efectivo / tesorería", "Sé controlar el efectivo disponible de la empresa"),
+      c("Elaboración de reportes financieros", "Sé preparar reportes financieros claros")
+    ]
+  },
+  "rh": {
+    label: "Recursos Humanos",
+    comps: [
+      c("Reclutamiento y selección", "Sé encontrar y elegir al candidato correcto para una vacante"),
+      c("Administración de nómina y prestaciones", "Sé administrar la nómina y las prestaciones del personal"),
+      c("Gestión del sistema de talento y capacitación", "Sé dar seguimiento a la capacitación y desarrollo del personal"),
+      c("Relaciones laborales y cumplimiento normativo laboral", "Conozco y aplico correctamente la normativa laboral en mi trabajo")
+    ]
+  },
+  "otro": { label: "Otro puesto", comps: [] }
+};
+
+
+const SCALE4 = [
+  "Conozco el concepto, necesito que me supervisen para hacerlo",
+  "Lo hago de forma estándar, con supervisión ocasional",
+  "Lo hago sin supervisión, resuelvo variaciones comunes",
+  "Puedo resolver casos complejos y formar a otros en esto"
+];
+
+const app = document.getElementById("app");
+const folioTag = document.getElementById("folioTag");
+
+function newId(){ return Date.now().toString(36) + "-" + Math.random().toString(36).slice(2,8); }
+function esc(s){ return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+function withTimeout(promise, ms, label){
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error("TIMEOUT:"+label)), ms))
+  ]);
+}
+function checkRequired(formEl, errEl){
+  if(formEl.checkValidity()) return true;
+  const invalid = formEl.querySelector(":invalid");
+  if(invalid){
+    invalid.scrollIntoView({ behavior:"smooth", block:"center" });
+    try{ invalid.focus({ preventScroll:true }); }catch(e){}
+  }
+  errEl.textContent = "Falta responder una o más preguntas obligatorias. Te llevamos al primer campo pendiente — revísalo y vuelve a enviar.";
+  errEl.style.display = "block";
+  return false;
+}
+function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+// ⚠️ Reemplaza esta URL por la que te da Google Apps Script al implementar (termina en /exec)
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyNe88GIxNLl4zZFGB9sTmk62-0s9cOVM-x9nUlPbjFkdijbN_KCk1WTU_OwZgxjsiAaw/exec";
+
+async function saveEntry(sheetName, payload){
+  const id = newId();
+  payload.folio = id;
+  const body = JSON.stringify({ encuesta: sheetName, data: payload });
+  let lastErr;
+  for(let attempt=1; attempt<=4; attempt++){
+    try{
+      const res = await withTimeout(fetch(SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body
+      }), 12000, "guardar");
+      if(!res.ok) throw new Error("Respuesta HTTP " + res.status);
+      try{
+        const data = await res.json();
+        if(data && data.ok === false) throw new Error(data.error || "El servidor respondió con un error.");
+      }catch(parseErr){ /* respuesta no-JSON pero HTTP OK: se considera guardado */ }
+      return id;
+    }catch(ex){
+      lastErr = ex;
+      if(attempt < 4) await sleep(attempt * 1200); // backoff: 1.2s, 2.4s, 3.6s antes de reintentar
+    }
+  }
+  throw lastErr;
+}
+
+function scaleField(name, n, labels, required=true){
+  let html = `<div class="scale-row">`;
+  for(let i=1;i<=n;i++){
+    html += `<label class="scale-opt">
+      <input type="radio" name="${name}" value="${i}" ${required?'required':''}>
+      <span class="lbl"><b>${i}</b>${esc(labels[i-1])}</span>
+    </label>`;
+  }
+  html += `</div>`;
+  return html;
+}
+
+function textField(name, placeholder="", long=false, required=true){
+  return long
+    ? `<textarea name="${name}" placeholder="${esc(placeholder)}" ${required?'required':''}></textarea>`
+    : `<input type="text" name="${name}" placeholder="${esc(placeholder)}" ${required?'required':''}>`;
+}
+
+function selectField(name, options, required=true){
+  let html = `<select name="${name}" ${required?'required':''}><option value="" disabled selected>Selecciona…</option>`;
+  for(const o of options) html += `<option value="${esc(o)}">${esc(o)}</option>`;
+  html += `</select>`;
+  return html;
+}
+
+function radioSingle(name, options, required=true){
+  let html = `<div class="scale-row">`;
+  for(const o of options){
+    html += `<label class="scale-opt">
+      <input type="radio" name="${name}" value="${esc(o)}" ${required?'required':''}>
+      <span class="lbl">${esc(o)}</span>
+    </label>`;
+  }
+  html += `</div>`;
+  return html;
+}
+
+function backBtn(){
+  return `<div class="backbar" onclick="renderHome()">&larr; Volver al menú</div>`;
+}
+
+// ---------- HOME ----------
+async function renderHome(){
+  folioTag.textContent = "PEM · FASE 1";
+  app.innerHTML = `
+    <div class="grid">
+      <button class="card-btn" onclick="renderSurvey1()">
+        <div class="num">01</div>
+        <div><div class="t">Autopercepción de Competencias</div>
+        <div class="d">Todo el personal · por puesto</div>
+        <span class="tag id">Identificada</span></div>
+      </button>
+      <button class="card-btn" onclick="renderSurvey2()">
+        <div class="num">02</div>
+        <div><div class="t">Clima hacia la Capacitación</div>
+        <div class="d">Todo el personal</div>
+        <span class="tag anon">Anónima</span></div>
+      </button>
+      <button class="card-btn" onclick="renderSurvey3()">
+        <div class="num">03</div>
+        <div><div class="t">Gerentes: Brechas Críticas</div>
+        <div class="d">Gerentes y supervisores</div>
+        <span class="tag id">Identificada</span></div>
+      </button>
+      <button class="card-btn" onclick="renderSurvey4()">
+        <div class="num">04</div>
+        <div><div class="t">Permanencia y Aspiración de Carrera</div>
+        <div class="d">Todo el personal</div>
+        <span class="tag anon">Anónima</span></div>
+      </button>
+    </div>
+    <div style="margin-top:16px;font-size:12px;color:var(--muted);text-align:center;">Los resultados se registran directo en la Hoja de Google del proyecto.</div>
+  `;
+}
+
+// ---------- SURVEY 1 ----------
+function renderSurvey1(){
+  folioTag.textContent = "ENCUESTA 01 · AUTOPERCEPCIÓN";
+  app.innerHTML = `
+    ${backBtn()}
+    <div class="panel">
+      <h2>01 — Autopercepción de Competencias</h2>
+      <div class="meta">Identificada · ~8-10 min · Selecciona tu puesto para ver tus competencias.</div>
+      <form id="f1" novalidate onsubmit="return false;">
+        <fieldset>
+          <legend><span class="q-num">1</span>Nombre completo <span class="req">*</span></legend>
+          ${textField("nombre","Nombre y apellidos")}
+        </fieldset>
+        <fieldset>
+          <legend><span class="q-num">2</span>Puesto actual <span class="req">*</span></legend>
+          <select name="puesto" id="puestoSel" required onchange="onPuestoChange()">
+            <option value="" disabled selected>Selecciona…</option>
+            ${Object.entries(PUESTOS).map(([k,v])=>`<option value="${k}">${esc(v.label)}</option>`).join("")}
+          </select>
+        </fieldset>
+        <fieldset>
+          <legend><span class="q-num">3</span>Sede <span class="req">*</span></legend>
+          ${selectField("sede", SEDES)}
+        </fieldset>
+        <fieldset>
+          <legend><span class="q-num">4</span>Antigüedad en el puesto actual <span class="req">*</span></legend>
+          ${radioSingle("antiguedad",["Menos de 6 meses","6-12 meses","1-3 años","3-5 años","Más de 5 años"])}
+        </fieldset>
+        <div id="corpBlock"></div>
+        <div id="compBlock"></div>
+        <fieldset id="openF" style="display:none;">
+          <legend><span class="q-num" id="openFNum">·</span>¿Qué es lo que más te gustaría aprender o reforzar en los próximos 6 meses? <span class="req">*</span></legend>
+          ${textField("aprender","", true)}
+        </fieldset>
+        <div class="error-msg" id="err1"></div>
+        <div class="actions">
+          <button class="btn" type="button" id="btn1">Enviar respuesta</button>
+        </div>
+      </form>
+    </div>
+  `;
+  document.getElementById("btn1").addEventListener("click", submitSurvey1);
+}
+window.onPuestoChange = function(){
+  const key = document.getElementById("puestoSel").value;
+  const p = PUESTOS[key];
+  const corpBlock = document.getElementById("corpBlock");
+  const compBlock = document.getElementById("compBlock");
+  const openF = document.getElementById("openF");
+  if(!key){ corpBlock.innerHTML=""; compBlock.innerHTML=""; openF.style.display="none"; return; }
+
+  let n = 5;
+  // Corporate block — applies to every puesto, including "Otro"
+  let corpHtml = `<div class="section-title" style="margin-top:0;">Competencias corporativas (aplican a todos los puestos)</div>`;
+  CORPORATE_COMPS.forEach((item,i)=>{
+    corpHtml += `<fieldset>
+      <legend><span class="q-num">${n++}</span>${esc(item.plain)} <span class="req">*</span></legend>
+      ${scaleField("corp_"+i, 4, SCALE4)}
+    </fieldset>`;
+  });
+  corpBlock.innerHTML = corpHtml;
+
+  // Technical block — specific to the selected puesto
+  let compHtml = "";
+  if(p && p.comps.length){
+    compHtml += `<div class="section-title">Preguntas de tu puesto: ${esc(p.label)}</div>`;
+    p.comps.forEach((item,i)=>{
+      compHtml += `<fieldset>
+        <legend><span class="q-num">${n++}</span>${esc(item.plain)} <span class="req">*</span></legend>
+        ${scaleField("comp_"+i, 4, SCALE4)}
+      </fieldset>`;
+    });
+  }
+  compBlock.innerHTML = compHtml;
+
+  document.getElementById("openFNum").textContent = n;
+  openF.style.display = "";
+};
+async function submitSurvey1(){
+  const formEl = document.getElementById("f1");
+  const btn = document.getElementById("btn1");
+  const err = document.getElementById("err1");
+  err.style.display="none";
+  if(!checkRequired(formEl, err)) return;
+  btn.disabled = true; btn.textContent = "Guardando…";
+  try{
+    const fd = new FormData(formEl);
+    const puestoKey = fd.get("puesto");
+    const p = PUESTOS[puestoKey];
+    const competencias_corporativas = [];
+    CORPORATE_COMPS.forEach((item,i)=>{ competencias_corporativas.push({ nombre:item.tech, pregunta_mostrada:item.plain, nivel: Number(fd.get("corp_"+i)) }); });
+    const competencias = [];
+    (p.comps||[]).forEach((item,i)=>{ competencias.push({ nombre:item.tech, pregunta_mostrada:item.plain, nivel: Number(fd.get("comp_"+i)) }); });
+    const payload = {
+      ts: new Date().toISOString(),
+      nombre: fd.get("nombre"),
+      puesto: p.label,
+      sede: fd.get("sede"),
+      antiguedad: fd.get("antiguedad"),
+      competencias_corporativas,
+      competencias,
+      aprender: fd.get("aprender")
+    };
+    const id = await saveEntry("Encuesta1_Autopercepcion", payload);
+    showSuccess(id, "Autopercepción de Competencias");
+  }catch(ex){
+    err.textContent = ex && ex.message && ex.message.indexOf("TIMEOUT")===0
+      ? "Se agotó el tiempo de espera al guardar (más de 12 segundos). Verifica tu conexión e inténtalo de nuevo."
+      : "No se pudo guardar tu respuesta: " + (ex && ex.message ? ex.message : "error desconocido") + ". Inténtalo de nuevo.";
+    err.style.display="block";
+    btn.disabled=false; btn.textContent="Enviar respuesta";
+  }
+}
+
+// ---------- SURVEY 2 ----------
+function renderSurvey2(){
+  folioTag.textContent = "ENCUESTA 02 · CLIMA";
+  app.innerHTML = `
+    ${backBtn()}
+    <div class="panel">
+      <h2>02 — Clima hacia la Capacitación</h2>
+      <div class="meta">Anónima · ~4-5 min</div>
+      <form id="f2" novalidate onsubmit="return false;">
+        <fieldset>
+          <legend><span class="q-num">1</span>Sede (solo para agrupar resultados) <span class="req">*</span></legend>
+          ${selectField("sede", SEDES)}
+        </fieldset>
+        <fieldset>
+          <legend><span class="q-num">2</span>La capacitación que he recibido en PEM en el último año ha sido útil para mi trabajo <span class="req">*</span></legend>
+          ${scaleField("util",5,["Totalmente en desacuerdo","En desacuerdo","Neutral","De acuerdo","Totalmente de acuerdo"])}
+        </fieldset>
+        <fieldset>
+          <legend><span class="q-num">3</span>La capacitación que he recibido está actualizada y es relevante para las herramientas/equipos que uso hoy <span class="req">*</span></legend>
+          ${scaleField("actualizada",5,["Totalmente en desacuerdo","En desacuerdo","Neutral","De acuerdo","Totalmente de acuerdo"])}
+        </fieldset>
+        <fieldset>
+          <legend><span class="q-num">4</span>Cuando tomo una capacitación, sé claramente si aprendí o no <span class="req">*</span></legend>
+          ${scaleField("retro",5,["Totalmente en desacuerdo","En desacuerdo","Neutral","De acuerdo","Totalmente de acuerdo"])}
+        </fieldset>
+        <fieldset>
+          <legend><span class="q-num">5</span>¿Qué formato prefieres para capacitarte? <span class="req">*</span></legend>
+          ${radioSingle("formato",["Presencial en aula","Video corto (10-20 min)","Ficha técnica impresa o PDF","Acompañamiento 1 a 1 con un compañero experto","Una combinación de los anteriores"])}
+        </fieldset>
+        <fieldset>
+          <legend><span class="q-num">6</span>¿En qué momento del día te resulta más viable capacitarte? <span class="req">*</span></legend>
+          ${radioSingle("momento",["Al inicio de mi turno","Durante descansos","Fuera de mi turno (tiempo propio)","No tengo tiempo disponible actualmente"])}
+        </fieldset>
+        <fieldset>
+          <legend><span class="q-num">7</span>¿Qué tema te gustaría que se capacitara primero en tu área? <span class="req">*</span></legend>
+          ${textField("tema","",true)}
+        </fieldset>
+        <fieldset>
+          <legend><span class="q-num">8</span>Comentario libre (opcional)</legend>
+          ${textField("comentario","",true,false)}
+        </fieldset>
+        <div class="error-msg" id="err2"></div>
+        <div class="actions"><button class="btn" type="button" id="btn2">Enviar respuesta</button></div>
+      </form>
+    </div>
+  `;
+  document.getElementById("btn2").addEventListener("click", async ()=>{
+    const formEl = document.getElementById("f2");
+    const btn = document.getElementById("btn2"); const err = document.getElementById("err2");
+    err.style.display="none";
+    if(!checkRequired(formEl, err)) return;
+    btn.disabled=true; btn.textContent="Guardando…";
+    try{
+      const fd = new FormData(formEl);
+      const payload = {
+        ts:new Date().toISOString(), sede:fd.get("sede"), util:fd.get("util"), actualizada:fd.get("actualizada"),
+        retro:fd.get("retro"), formato:fd.get("formato"), momento:fd.get("momento"),
+        tema:fd.get("tema"), comentario:fd.get("comentario")||""
+      };
+      const id = await saveEntry("Encuesta2_Clima", payload); showSuccess(id,"Clima hacia la Capacitación");
+    }
+    catch(ex){
+      err.textContent = ex && ex.message && ex.message.indexOf("TIMEOUT")===0
+        ? "Se agotó el tiempo de espera al guardar (más de 12 segundos). Verifica tu conexión e inténtalo de nuevo."
+        : "No se pudo guardar tu respuesta: " + (ex && ex.message ? ex.message : "error desconocido") + ". Inténtalo de nuevo.";
+      err.style.display="block"; btn.disabled=false; btn.textContent="Enviar respuesta";
+    }
+  });
+}
+
+// ---------- SURVEY 3 ----------
+function puestoBlockHtml(n, required){
+  return `
+    <fieldset>
+      <legend>Puesto de tu equipo #${n} ${required?'<span class="req">*</span>':'(opcional)'}</legend>
+      <label class="field-label">Nombre del puesto</label>
+      ${textField("puesto"+n,"Ej. Técnico de Campo", false, required)}
+      <label class="field-label" style="margin-top:12px;">¿Qué le falta hoy a ese equipo para operar sin que tú tengas que supervisarlo constantemente?</label>
+      ${textField("falta"+n,"",true, required)}
+      <label class="field-label" style="margin-top:12px;">Si tu persona más experimentada de ese puesto faltara mañana sin aviso, ¿qué tan preparado está el resto del equipo para cubrirla?</label>
+      ${scaleField("prep"+n, 4, ["Nada preparado","Poco preparado","Preparado","Totalmente preparado"], required)}
+    </fieldset>`;
+}
+function renderSurvey3(){
+  folioTag.textContent = "ENCUESTA 03 · GERENTES";
+  app.innerHTML = `
+    ${backBtn()}
+    <div class="panel">
+      <h2>03 — Gerentes: Percepción de Brechas Críticas</h2>
+      <div class="meta">Identificada · ~10-12 min · Para gerentes y supervisores de área/sede</div>
+      <form id="f3" novalidate onsubmit="return false;">
+        <fieldset>
+          <legend><span class="q-num">1</span>Nombre <span class="req">*</span></legend>
+          ${textField("nombre")}
+        </fieldset>
+        <fieldset>
+          <legend><span class="q-num">2</span>Área / sede que supervisas <span class="req">*</span></legend>
+          ${textField("area")}
+        </fieldset>
+        ${puestoBlockHtml(1, true)}
+        ${puestoBlockHtml(2, false)}
+        ${puestoBlockHtml(3, false)}
+        <fieldset>
+          <legend><span class="q-num">8</span>De todo tu equipo, ¿qué 3 brechas de competencia son las más urgentes de cerrar en los próximos 6 meses? <span class="req">*</span></legend>
+          ${textField("top3","",true)}
+        </fieldset>
+        <div class="error-msg" id="err3"></div>
+        <div class="actions"><button class="btn" type="button" id="btn3">Enviar respuesta</button></div>
+      </form>
+    </div>
+  `;
+  document.getElementById("btn3").addEventListener("click", async ()=>{
+    const formEl = document.getElementById("f3");
+    const btn=document.getElementById("btn3"); const err=document.getElementById("err3");
+    err.style.display="none";
+    if(!checkRequired(formEl, err)) return;
+    btn.disabled=true; btn.textContent="Guardando…";
+    try{
+      const fd = new FormData(formEl);
+      const equipos = [];
+      for(let n=1;n<=3;n++){
+        const puesto = fd.get("puesto"+n);
+        if(puesto){ equipos.push({ puesto, falta: fd.get("falta"+n)||"", preparacion: fd.get("prep"+n)||"" }); }
+      }
+      const payload = { ts:new Date().toISOString(), nombre:fd.get("nombre"), area:fd.get("area"), equipos, top3:fd.get("top3") };
+      const id = await saveEntry("Encuesta3_Gerentes", payload); showSuccess(id,"Gerentes: Percepción de Brechas");
+    }
+    catch(ex){
+      err.textContent = ex && ex.message && ex.message.indexOf("TIMEOUT")===0
+        ? "Se agotó el tiempo de espera al guardar (más de 12 segundos). Verifica tu conexión e inténtalo de nuevo."
+        : "No se pudo guardar tu respuesta: " + (ex && ex.message ? ex.message : "error desconocido") + ". Inténtalo de nuevo.";
+      err.style.display="block"; btn.disabled=false; btn.textContent="Enviar respuesta";
+    }
+  });
+}
+
+// ---------- SURVEY 4 ----------
+function renderSurvey4(){
+  folioTag.textContent = "ENCUESTA 04 · PERMANENCIA";
+  app.innerHTML = `
+    ${backBtn()}
+    <div class="panel">
+      <h2>04 — Permanencia y Aspiración de Carrera</h2>
+      <div class="meta">Anónima · ~4 min</div>
+      <form id="f4" novalidate onsubmit="return false;">
+        <fieldset>
+          <legend><span class="q-num">1</span>Sede (solo para agrupar resultados) <span class="req">*</span></legend>
+          ${selectField("sede", SEDES)}
+        </fieldset>
+        <fieldset>
+          <legend><span class="q-num">2</span>Familia de puesto (solo para agrupar resultados) <span class="req">*</span></legend>
+          ${radioSingle("familia",["Técnico/Operativo","Especialista","Supervisión","Gerencia","Administrativo"])}
+        </fieldset>
+        <fieldset>
+          <legend><span class="q-num">3</span>Antigüedad en PEM <span class="req">*</span></legend>
+          ${radioSingle("antiguedad",["Menos de 1 año","1-3 años","3-5 años","Más de 5 años"])}
+        </fieldset>
+        <fieldset>
+          <legend><span class="q-num">4</span>¿Qué tan probable es que sigas trabajando en PEM en los próximos 2 años? <span class="req">*</span></legend>
+          ${scaleField("probabilidad",5,["Nada probable","Poco probable","Neutral","Probable","Totalmente probable"])}
+        </fieldset>
+        <fieldset>
+          <legend><span class="q-num">5</span>¿Qué te motivaría más a quedarte y crecer en PEM? <span class="req">*</span></legend>
+          ${radioSingle("motivador",["Crecimiento técnico / especializarme más","Oportunidad de supervisión o liderazgo","Mejor compensación","Mejores herramientas o equipo de trabajo","Mayor reconocimiento a mi trabajo","Otro"])}
+        </fieldset>
+        <fieldset>
+          <legend><span class="q-num">6</span>¿Hacia dónde te gustaría crecer en los próximos 2-3 años? <span class="req">*</span></legend>
+          ${radioSingle("crecimiento",["Profundizar como especialista técnico","Pasar a un puesto de supervisión o liderazgo","Mantenerme en mi rol actual","Aún no lo he pensado"])}
+        </fieldset>
+        <fieldset>
+          <legend><span class="q-num">7</span>Comentario libre (opcional)</legend>
+          ${textField("comentario","",true,false)}
+        </fieldset>
+        <div class="error-msg" id="err4"></div>
+        <div class="actions"><button class="btn" type="button" id="btn4">Enviar respuesta</button></div>
+      </form>
+    </div>
+  `;
+  document.getElementById("btn4").addEventListener("click", async ()=>{
+    const formEl = document.getElementById("f4");
+    const btn=document.getElementById("btn4"); const err=document.getElementById("err4");
+    err.style.display="none";
+    if(!checkRequired(formEl, err)) return;
+    btn.disabled=true; btn.textContent="Guardando…";
+    try{
+      const fd = new FormData(formEl);
+      const payload = {
+        ts:new Date().toISOString(), sede:fd.get("sede"), familia:fd.get("familia"), antiguedad:fd.get("antiguedad"),
+        probabilidad:fd.get("probabilidad"), motivador:fd.get("motivador"), crecimiento:fd.get("crecimiento"),
+        comentario:fd.get("comentario")||""
+      };
+      const id = await saveEntry("Encuesta4_Permanencia", payload); showSuccess(id,"Permanencia y Aspiración de Carrera");
+    }
+    catch(ex){
+      err.textContent = ex && ex.message && ex.message.indexOf("TIMEOUT")===0
+        ? "Se agotó el tiempo de espera al guardar (más de 12 segundos). Verifica tu conexión e inténtalo de nuevo."
+        : "No se pudo guardar tu respuesta: " + (ex && ex.message ? ex.message : "error desconocido") + ". Inténtalo de nuevo.";
+      err.style.display="block"; btn.disabled=false; btn.textContent="Enviar respuesta";
+    }
+  });
+}
+
+function showSuccess(id, title){
+  folioTag.textContent = "RESPUESTA REGISTRADA";
+  app.innerHTML = `
+    <div class="panel success">
+      <div class="check">&#10003;</div>
+      <h2>¡Gracias! Tu respuesta fue registrada</h2>
+      <div class="meta">${esc(title)}</div>
+      <div class="folio2 mono">Folio: ${esc(id)}</div>
+      <div class="actions" style="justify-content:center; margin-top:22px;">
+        <button class="btn ghost" onclick="renderHome()">Volver al menú</button>
+      </div>
+    </div>
+  `;
+}
+
+renderHome();
+</script>
+</body>
+</html>
