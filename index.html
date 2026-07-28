@@ -596,9 +596,15 @@ function renderSurvey2(){
     try{
       const fd = new FormData(formEl);
       const payload = {
-        ts:new Date().toISOString(), sede:fd.get("sede"), util:fd.get("util"), actualizada:fd.get("actualizada"),
-        retro:fd.get("retro"), formato:fd.get("formato"), momento:fd.get("momento"),
-        tema:fd.get("tema"), comentario:fd.get("comentario")||""
+        ts: new Date().toISOString(),
+        "Sede": fd.get("sede"),
+        "La capacitación que he recibido en PEM en el último año ha sido útil para mi trabajo": fd.get("util"),
+        "La capacitación que he recibido está actualizada y es relevante para las herramientas/equipos que uso hoy": fd.get("actualizada"),
+        "Cuando tomo una capacitación, sé claramente si aprendí o no": fd.get("retro"),
+        "¿Qué formato prefieres para capacitarte?": fd.get("formato"),
+        "¿En qué momento del día te resulta más viable capacitarte?": fd.get("momento"),
+        "¿Qué tema te gustaría que se capacitara primero en tu área?": fd.get("tema"),
+        "Comentario libre": fd.get("comentario")||""
       };
       const id = await saveEntry("Encuesta2_Clima", payload); showSuccess(id,"Clima hacia la Capacitación");
     }
@@ -660,13 +666,13 @@ function renderSurvey3(){
     btn.disabled=true; btn.textContent="Guardando…";
     try{
       const fd = new FormData(formEl);
-      const payload = { ts:new Date().toISOString(), nombre:fd.get("nombre"), area:fd.get("area") };
+      const payload = { ts: new Date().toISOString(), "Nombre": fd.get("nombre"), "Área/sede que supervisas": fd.get("area") };
       for(let n=1;n<=3;n++){
-        payload["puesto"+n] = fd.get("puesto"+n) || "";
-        payload["falta"+n] = fd.get("falta"+n) || "";
-        payload["preparacion"+n] = fd.get("prep"+n) || "";
+        payload["Puesto de tu equipo #"+n] = fd.get("puesto"+n) || "";
+        payload["Qué le falta al equipo del puesto #"+n+" para operar sin supervisión constante"] = fd.get("falta"+n) || "";
+        payload["Preparación del equipo #"+n+" ante ausencia imprevista del más experimentado (1-4)"] = fd.get("prep"+n) || "";
       }
-      payload["top3"] = fd.get("top3");
+      payload["3 brechas más urgentes de cerrar en los próximos 6 meses"] = fd.get("top3");
       const id = await saveEntry("Encuesta3_Gerentes", payload); showSuccess(id,"Gerentes: Percepción de Brechas");
     }
     catch(ex){
@@ -729,9 +735,14 @@ function renderSurvey4(){
     try{
       const fd = new FormData(formEl);
       const payload = {
-        ts:new Date().toISOString(), sede:fd.get("sede"), familia:fd.get("familia"), antiguedad:fd.get("antiguedad"),
-        probabilidad:fd.get("probabilidad"), motivador:fd.get("motivador"), crecimiento:fd.get("crecimiento"),
-        comentario:fd.get("comentario")||""
+        ts: new Date().toISOString(),
+        "Sede": fd.get("sede"),
+        "Familia de puesto": fd.get("familia"),
+        "Antigüedad en PEM": fd.get("antiguedad"),
+        "¿Qué tan probable es que sigas trabajando en PEM en los próximos 2 años?": fd.get("probabilidad"),
+        "¿Qué te motivaría más a quedarte y crecer en PEM?": fd.get("motivador"),
+        "¿Hacia dónde te gustaría crecer en los próximos 2-3 años?": fd.get("crecimiento"),
+        "Comentario libre": fd.get("comentario")||""
       };
       const id = await saveEntry("Encuesta4_Permanencia", payload); showSuccess(id,"Permanencia y Aspiración de Carrera");
     }
